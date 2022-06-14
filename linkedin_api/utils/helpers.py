@@ -1,3 +1,6 @@
+from datetime import datetime
+
+
 def get_id_from_urn(urn):
     """
     Return the ID of a given Linkedin URN.
@@ -231,3 +234,12 @@ def get_list_posts_sorted_without_promoted(l_urns, l_posts):
                 l_posts[:] = [d for d in l_posts if urn not in d.get("url")]
                 break
     return l_posts_sorted_without_promoted
+
+def get_timestamp_from_activity_urn(urn_activity: str) -> datetime:
+    post_id = urn_activity.split(":")[-1]
+    post_id_binary = bin(int(post_id))
+    first_41 = post_id_binary[:43]
+    raw_timestamp = int(first_41, 2) / 1000
+
+    timestamp = datetime.fromtimestamp(raw_timestamp, tz=datetime.timezone.utc)
+    return timestamp
