@@ -13,6 +13,7 @@ class LinkedinActivity(BaseModel):
     post_urn: str
     is_shared: bool
     shared_caption: str
+    shared_url: str
     is_reposted: bool
     is_liked: bool
     is_commented: bool
