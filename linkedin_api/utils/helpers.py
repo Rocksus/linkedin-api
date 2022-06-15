@@ -305,11 +305,17 @@ def elements_to_linkedin_activity(data: List[Dict[Any, Any]]) -> model.LinkedinP
             except:
                 pass
 
+        highlighted_comment = ""
+        highlighted_comment_datetime: datetime.datetime = datetime.datetime.now()
         if is_commented:
             try:
-                highlighted_comment: str = d["highlightedComments"][0]["commentV2"]["text"]
+                highlighted_comment_data = d["highlightedComments"][0]
+                highlighted_comment: str = highlighted_comment_data["commentV2"]["text"]
+                highlighted_comment_timestamp: int = highlighted_comment_data["createdTime"]
+                highlighted_comment_datetime: datetime.datetime = datetime.datetime.fromtimestamp(highlighted_comment_timestamp, tz=datetime.timezone.utc)
             except:
                 highlighted_comment = ""
+                highlighted_comment_timestamp = -1
 
         try:
             caption: str = d["commentary"]["text"]["text"]
@@ -336,6 +342,7 @@ def elements_to_linkedin_activity(data: List[Dict[Any, Any]]) -> model.LinkedinP
             is_liked= is_liked,
             is_commented= is_commented,
             comment = highlighted_comment,
+            comment_timestamp = highlighted_comment_datetime,
             timestamp = get_timestamp_from_entity_urn(entity_urn),
         )
 
