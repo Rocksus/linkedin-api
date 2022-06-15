@@ -2,14 +2,17 @@
 Provides linkedin api-related code
 """
 import base64
+from datetime import datetime
 import json
 import logging
 import random
+from typing import Optional
 import uuid
 from operator import itemgetter
 from time import sleep, time
 from urllib.parse import quote, urlencode
 
+from linkedin_api import model
 from linkedin_api.client import Client
 from linkedin_api.utils.helpers import (
     append_update_post_field_to_posts_list,
@@ -22,6 +25,8 @@ from linkedin_api.utils.helpers import (
     get_update_url,
     parse_list_raw_posts,
     parse_list_raw_urns,
+    get_timestamp_from_entity_urn,
+    elements_to_linkedin_activity,
 )
 
 logger = logging.getLogger(__name__)
@@ -1436,3 +1441,68 @@ class Linkedin(object):
             limit, offset, exclude_promoted_posts
         )
         return get_list_posts_sorted_without_promoted(l_urns, l_posts)
+
+    def get_profile_all_activity(
+            self, public_id:Optional[str]=None, 
+            urn_id:Optional[str]=None, 
+            post_count:int=10, 
+            max_time=Optional[datetime]
+        ) -> model.LinkedinProfileActivityData:
+        """
+        get_profile_all_activity: Get profile all activity
+
+        :param public_id: LinkedIn public ID for a profile
+        :type public_id: str, optional
+        :param urn_id: LinkedIn URN ID for a profile
+        :type urn_id: str, optional
+        :param post_count: Number of posts to fetch
+        :type post_count: int, optional
+        :type max_time: datetime, optional
+        :return: List of posts
+        :rtype: list
+        """
+        url_params = {
+            "count": min(post_count, self._MAX_POST_COUNT),
+            "start": 0,
+            "q": "memberFeed",
+            "moduleKey": "member-activity:phone",
+            "includeLongTermHistory": True,
+        }
+        if urn_id:
+            profile_urn = f"urn:li:fsd_profile:{urn_id}"
+        else:
+            profile = self.get_profile(public_id=public_id)
+            profile_urn = profile["profile_urn"].replace(
+                "fs_miniProfile", "fsd_profile"
+            )
+        url_params["profileUrn"] = profile_urn
+        url = f"/identity/profileUpdatesV2"
+        res = self._fetch(url, params=url_params)
+        data = res.json()
+        if data and "status" in data and data["status"] != 200:
+            self.logger.info("request failed: {}".format(data["message"]))
+            return {}
+        while data and data["metadata"]["paginationToken"] != "":
+            if len(data["elements"]) >= post_count:
+                break
+            pagination_token = data["metadata"]["paginationToken"]
+            url_params["start"] = url_params["start"] + self._MAX_POST_COUNT
+            url_params["paginationToken"] = pagination_token
+            res = self._fetch(url, params=url_params)
+            new_elements = res.json()["elements"]
+            data["metadata"] = res.json()["metadata"]
+            data["elements"] = data["elements"] + new_elements
+            data["paging"] = res.json()["paging"]
+            if max_time:
+                try:
+                    sample = new_elements[-1]
+                    sample_urn = sample["entityUrn"]
+                    sample_timestamp = get_timestamp_from_entity_urn(sample_urn)
+                    if sample_timestamp >= max_time:
+                        break
+                except Exception as e:
+                    self.logger.exception(e)
+                    pass
+
+        res = elements_to_linkedin_activity(data["elements"])
+        return res
