@@ -1,3 +1,8 @@
+import datetime
+import re
+from typing import Any, Dict, List
+from linkedin_api import model
+
 def get_id_from_urn(urn):
     """
     Return the ID of a given Linkedin URN.
@@ -231,3 +236,110 @@ def get_list_posts_sorted_without_promoted(l_urns, l_posts):
                 l_posts[:] = [d for d in l_posts if urn not in d.get("url")]
                 break
     return l_posts_sorted_without_promoted
+
+def get_timestamp_from_entity_urn(entity_urn: str) -> datetime.datetime:
+    urn_activity = re.search("(urn:li:activity:\d+)", entity_urn).group()
+    post_id = urn_activity.split(":")[-1]
+    post_id_binary = bin(int(post_id))
+    first_41 = post_id_binary[:43]
+    raw_timestamp = int(first_41, 2) / 1000
+
+    timestamp = datetime.datetime.fromtimestamp(raw_timestamp, tz=datetime.timezone.utc)
+    return timestamp
+
+def elements_to_linkedin_activity(data: List[Dict[Any, Any]]) -> model.LinkedinProfileActivityData:
+    activities_list: List[model.LinkedinActivity] = []
+    for d in data:
+        is_liked = is_reposted = is_shared = is_commented = False
+
+        try:
+            actor_urn: str = d["actor"]["urn"]
+
+            if "company" in actor_urn:
+                actor_type = "company"
+            elif "member" in actor_urn:
+                actor_type = "member"
+        except:
+            actor_urn = ""
+
+        try:
+            actor_name: str = d["actor"]["name"]["text"]
+        except:
+            actor_name = ""
+    
+        try:
+            dash_entity_urn: str = d["dashEntityUrn"]
+        except:
+            dash_entity_urn = ""
+
+        try:
+            entity_urn: str = d["entityUrn"]
+        except:
+            entity_urn = ""
+
+        try:
+            actions = d["updateMetadata"]["updateActions"]["actions"]
+            for a in actions:
+                if a["actionType"] == "SHARE_VIA":
+                    url: str = a["url"]
+                    break
+        except:
+            url = ""
+
+        try:
+            shared_caption: str = d["resharedUpdate"]["commentary"]["text"]["text"]
+            is_shared = True
+        except:
+            shared_caption = ""
+
+        if not is_shared:
+            try:
+                header_text: str = d["header"]["text"]["text"]
+                if "reposted this" in header_text:
+                    is_reposted = True
+                elif "commented on this" in header_text:
+                    is_commented = True
+                else:
+                    # too many branches
+                    is_liked = True
+            except:
+                pass
+
+        if is_commented:
+            try:
+                highlighted_comment: str = d["highlightedComments"][0]["commentV2"]["text"]
+            except:
+                highlighted_comment = ""
+
+        try:
+            caption: str = d["commentary"]["text"]["text"]
+        except:
+            caption = ""
+
+        try:
+            post_urn: str = d["updateMetadata"]["urn"]
+        except:
+            post_urn = ""
+                
+        activity_data = model.LinkedinActivity(
+            actor_urn= actor_urn,
+            actor_type= actor_type,
+            actor_name= actor_name,
+            dash_entity_urn= dash_entity_urn,
+            entity_urn= entity_urn,
+            url= url,
+            caption= caption,
+            post_urn= post_urn,
+            is_shared= is_shared,
+            shared_caption= shared_caption,
+            is_reposted= is_reposted,
+            is_liked= is_liked,
+            is_commented= is_commented,
+            comment = highlighted_comment,
+            timestamp = get_timestamp_from_entity_urn(entity_urn),
+        )
+
+        activities_list.append(activity_data)
+
+    return activities_list
+        
