@@ -288,9 +288,15 @@ def elements_to_linkedin_activity(data: List[Dict[Any, Any]]) -> model.LinkedinP
 
         try:
             shared_caption: str = d["resharedUpdate"]["commentary"]["text"]["text"]
+            shared_actions = d["updateMetadata"]["updateActions"]["actions"]
+            for a in shared_actions:
+                if a["actionType"] == "SHARE_VIA":
+                    shared_url: str = a["url"]
+                    break
             is_shared = True
         except:
             shared_caption = ""
+            shared_url = ""
 
         if not is_shared:
             try:
@@ -338,6 +344,7 @@ def elements_to_linkedin_activity(data: List[Dict[Any, Any]]) -> model.LinkedinP
             post_urn= post_urn,
             is_shared= is_shared,
             shared_caption= shared_caption,
+            shared_url=shared_url,
             is_reposted= is_reposted,
             is_liked= is_liked,
             is_commented= is_commented,
