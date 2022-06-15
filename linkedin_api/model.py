@@ -17,6 +17,7 @@ class LinkedinActivity(BaseModel):
     is_liked: bool
     is_commented: bool
     comment: str
+    comment_timestamp: datetime
     timestamp: datetime
     
 class LinkedinProfileActivityData(BaseModel):

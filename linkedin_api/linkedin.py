@@ -1446,7 +1446,7 @@ class Linkedin(object):
             self, public_id:Optional[str]=None, 
             urn_id:Optional[str]=None, 
             post_count:int=10, 
-            max_time=Optional[datetime]
+            max_time:Optional[datetime]=None,
         ) -> model.LinkedinProfileActivityData:
         """
         get_profile_all_activity: Get profile all activity
