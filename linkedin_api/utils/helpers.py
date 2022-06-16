@@ -355,5 +355,7 @@ def elements_to_linkedin_activity(data: List[Dict[Any, Any]]) -> model.LinkedinP
 
         activities_list.append(activity_data)
 
-    return activities_list
+    return model.LinkedinProfileActivityData(
+        activities=activities_list,
+    )
         
