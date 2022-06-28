@@ -298,9 +298,12 @@ def elements_to_linkedin_activity(data: List[Dict[Any, Any]]) -> model.LinkedinP
             shared_caption = ""
             shared_url = ""
 
-        if not is_shared:
-            try:
-                header_text: str = d["header"]["text"]["text"]
+ 
+        try:
+            header_text: str = d["header"]["text"]["text"]
+            if is_shared and header_text:
+                is_shared = False
+            if not is_shared:
                 if "reposted this" in header_text:
                     is_reposted = True
                 elif "commented on this" in header_text:
@@ -308,8 +311,8 @@ def elements_to_linkedin_activity(data: List[Dict[Any, Any]]) -> model.LinkedinP
                 else:
                     # too many branches
                     is_liked = True
-            except:
-                pass
+        except:
+            pass
 
         highlighted_comment = ""
         highlighted_comment_datetime: datetime.datetime = datetime.datetime.now(tz=datetime.timezone.utc)
