@@ -170,8 +170,6 @@ class Linkedin(object):
         data = res.json()
         if data and "status" in data and data["status"] != 200:
             self.logger.info("request failed: {}".format(data["status"]))
-            if data["status"] == 403:
-                raise UserNotFoundException()
             return {}
         while data and data["metadata"]["paginationToken"] != "":
             if len(data["elements"]) >= comment_count:
@@ -623,6 +621,8 @@ class Linkedin(object):
         data = res.json()
         if data and "status" in data and data["status"] != 200:
             self.logger.info("request failed: {}".format(data["message"]))
+            if data["status"] == 403:
+                raise UserNotFoundException()
             return {}
 
         # massage [profile] data
