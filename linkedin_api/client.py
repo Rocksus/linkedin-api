@@ -14,6 +14,9 @@ class ChallengeException(Exception):
 class UnauthorizedException(Exception):
     pass
 
+class UserNotFoundException(Exception):
+    pass
+
 
 class Client(object):
     """
