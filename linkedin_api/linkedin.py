@@ -13,7 +13,7 @@ from time import sleep, time
 from urllib.parse import quote, urlencode
 
 from linkedin_api import model
-from linkedin_api.client import Client
+from linkedin_api.client import Client, UserNotFoundException
 from linkedin_api.utils.helpers import (
     append_update_post_field_to_posts_list,
     get_id_from_urn,
@@ -170,6 +170,8 @@ class Linkedin(object):
         data = res.json()
         if data and "status" in data and data["status"] != 200:
             self.logger.info("request failed: {}".format(data["status"]))
+            if data["status"] == 403:
+                raise UserNotFoundException()
             return {}
         while data and data["metadata"]["paginationToken"] != "":
             if len(data["elements"]) >= comment_count:
