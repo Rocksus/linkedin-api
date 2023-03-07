@@ -27,6 +27,8 @@ from linkedin_api.utils.helpers import (
     parse_list_raw_urns,
     get_timestamp_from_entity_urn,
     elements_to_linkedin_activity,
+    generate_trackingId,
+    generate_trackingId_as_charString,
 )
 
 logger = logging.getLogger(__name__)
@@ -234,8 +236,9 @@ class Linkedin(object):
 
             new_elements = []
             elements = data.get("data", {}).get("elements", [])
-            for i in range(len(elements)):
-                new_elements.extend(elements[i]["elements"])
+
+            for element in elements:
+                new_elements.extend(element.get("elements", {}))
                 # not entirely sure what extendedElements generally refers to - keyword search gives back a single job?
                 # new_elements.extend(data["data"]["elements"][i]["extendedElements"])
             results.extend(new_elements)
@@ -374,6 +377,9 @@ class Linkedin(object):
                     "distance": item.get("memberDistance", {}).get("value"),
                     "public_id": item.get("publicIdentifier"),
                     "tracking_id": get_id_from_urn(item.get("trackingUrn")),
+                    "jobtitle": item.get("headline", {}).get("text"),
+                    "location": item.get("subline", {}).get("text"),
+                    "name": item.get("title", {}).get("text"),
                 }
             )
 
@@ -645,6 +651,7 @@ class Linkedin(object):
             profile["profile_id"] = get_id_from_urn(profile["miniProfile"]["entityUrn"])
             profile["profile_urn"] = profile["miniProfile"]["entityUrn"]
             profile["member_urn"] = profile["miniProfile"]["objectUrn"]
+            profile["public_id"] = profile["miniProfile"]["publicIdentifier"]
 
             del profile["miniProfile"]
 
@@ -943,16 +950,6 @@ class Linkedin(object):
 
         return res.json()
 
-    def generateTrackingIdAsCharString(self):
-        """Generates and returns a random trackingId
-
-        :return: Random trackingId string
-        :rtype: str
-        """
-        random_int_array = [random.randrange(256) for _ in range(16)]
-        rand_byte_array = bytearray(random_int_array)
-        return "".join([chr(i) for i in rand_byte_array])
-
     def send_message(self, message_body, conversation_urn_id=None, recipients=None):
         """Send a message to a given conversation.
 
@@ -984,7 +981,7 @@ class Linkedin(object):
                         "attachments": [],
                     }
                 },
-                "trackingId": self.generateTrackingIdAsCharString(),
+                "trackingId": generate_trackingId_as_charString(),
             },
             "dedupeByClientGeneratedToken": False,
         }
@@ -1104,16 +1101,6 @@ class Linkedin(object):
 
         return res.status_code == 200
 
-    def generateTrackingId(self):
-        """Generates and returns a random trackingId
-
-        :return: Random trackingId string
-        :rtype: str
-        """
-        random_int_array = [random.randrange(256) for _ in range(16)]
-        rand_byte_array = bytearray(random_int_array)
-        return str(base64.b64encode(rand_byte_array))[2:-1]
-
     def add_connection(self, profile_public_id, message="", profile_urn=None):
         """Add a given profile id as a connection.
 
@@ -1141,21 +1128,21 @@ class Linkedin(object):
             # We extract the last part of the string
             profile_urn = profile_urn_string.split(":")[-1]
 
-        trackingId = self.generateTrackingId()
-        payload = (
-            '{"trackingId":"'
-            + trackingId
-            + '", "message":"'
-            + message
-            + '", "invitations":[], "excludeInvitations":[],"invitee":{"com.linkedin.voyager.growth.invitation.InviteeProfile":\
-            {"profileId":"'
-            + profile_urn
-            + '"'
-            + "}}}"
-        )
+        trackingId = generate_trackingId()
+        payload = {
+            "trackingId": trackingId,
+            "message": message,
+            "invitations": [],
+            "excludeInvitations": [],
+            "invitee": {
+                "com.linkedin.voyager.growth.invitation.InviteeProfile": {
+                    "profileId": profile_urn
+                }
+            },
+        }
         res = self._post(
             "/growth/normInvitations",
-            data=payload,
+            data=json.dumps(payload),
             headers={"accept": "application/vnd.linkedin.normalized+json+2.1"},
         )
 
@@ -1508,3 +1495,26 @@ class Linkedin(object):
 
         res = elements_to_linkedin_activity(data["elements"])
         return res
+    
+
+    def get_job(self, job_id):
+        """Fetch data about a given job.
+        :param job_id: LinkedIn job ID
+        :type job_id: str
+
+        :return: Job data
+        :rtype: dict
+        """
+        params = {
+            "decorationId": "com.linkedin.voyager.deco.jobs.web.shared.WebLightJobPosting-23",
+        }
+
+        res = self._fetch(f"/jobs/jobPostings/{job_id}", params=params)
+
+        data = res.json()
+
+        if data and "status" in data and data["status"] != 200:
+            self.logger.info("request failed: {}".format(data["message"]))
+            return {}
+
+        return data

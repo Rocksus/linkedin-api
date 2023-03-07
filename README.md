@@ -4,7 +4,11 @@
 
 <p align="center">
   <a href="https://iscraper.io/" target="_blank">
-    <img width="150px" src="https://iscraper.io/static/front/images/logo-dark.png" alt="serpsbot">
+    <img width="150px" src="./assets/logos/iscraper.png" alt="serpsbot">
+  </a>
+
+  <a href="https://www.piloterr.com/?ref=tomquirk" target="_blank">
+    <img width="150px" src="./assets/logos/piloterr.png" alt="piloterr">
   </a>
 </p>
 
@@ -28,6 +32,7 @@ Before using this project, please consult the [Terms and Conditions](#terms-and-
 > ⚠️ Python >= 3.6 required
 
 To install the package with the latest changes in this repo
+
 ```bash
 pip3 install git+https://github.com/tomquirk/linkedin-api.git
 ```
@@ -161,7 +166,7 @@ You can also use the `network` tab in you browsers developer tools, but you will
 
 ### How Clients query Voyager
 
-Linkedin seems to have developed an internal query language/syntax where Clients (i.e. front-ends like linkedin.com) to specify what data they want (similar to the GraphQL concept). **If anyone knows what this is, I'd love to know!**.
+linkedin.com queries data using the [Rest-li Protocol](https://linkedin.github.io/rest.li/spec/protocol). Rest-li is an internal query language/syntax where clients (like linkedin.com) to specify what data they want (similar to the GraphQL concept).
 
 Here's an example of making a request for an organisation's `name` and `groups` (the Linkedin groups it manages):
 
