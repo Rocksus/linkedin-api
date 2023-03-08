@@ -122,15 +122,20 @@ class Client(object):
 
         clientApplicationInstanceRaw = soup.find(
             "meta", attrs={"name": "applicationInstance"}
-        ).attrs["content"]
-        clientApplicationInstance = json.loads(clientApplicationInstanceRaw)
+        )
+        if clientApplicationInstanceRaw:
+            clientApplicationInstanceRaw = (
+                clientApplicationInstanceRaw.attrs.get("content") or {}
+            )
+            clientApplicationInstance = json.loads(clientApplicationInstanceRaw)
+            self.metadata["clientApplicationInstance"] = clientApplicationInstance
 
-        clientPageInstanceId = soup.find(
+        clientPageInstanceIdRaw = soup.find(
             "meta", attrs={"name": "clientPageInstanceId"}
-        ).attrs["content"]
-
-        self.metadata["clientApplicationInstance"] = clientApplicationInstance
-        self.metadata["clientPageInstanceId"] = clientPageInstanceId
+        )
+        if clientPageInstanceIdRaw:
+            clientPageInstanceId = clientPageInstanceIdRaw.attrs.get("content") or {}
+            self.metadata["clientPageInstanceId"] = clientPageInstanceId
 
     def _do_authentication_request(self, username, password):
         """

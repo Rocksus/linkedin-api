@@ -2,6 +2,9 @@ import datetime
 import re
 from typing import Any, Dict, List
 from linkedin_api import model
+import random
+import base64
+
 
 def get_id_from_urn(urn):
     """
@@ -252,6 +255,9 @@ def elements_to_linkedin_activity(data: List[Dict[Any, Any]]) -> model.LinkedinP
     for d in data:
         is_liked = is_reposted = is_shared = is_commented = False
 
+        actor_type = ""
+        url = ""
+        shared_url = ""
         try:
             actor_urn: str = d["actor"]["urn"]
 
@@ -361,3 +367,24 @@ def elements_to_linkedin_activity(data: List[Dict[Any, Any]]) -> model.LinkedinP
         activities=activities_list,
     )
         
+
+def generate_trackingId_as_charString():
+    """Generates and returns a random trackingId
+
+    :return: Random trackingId string
+    :rtype: str
+    """
+    random_int_array = [random.randrange(256) for _ in range(16)]
+    rand_byte_array = bytearray(random_int_array)
+    return "".join([chr(i) for i in rand_byte_array])
+
+
+def generate_trackingId():
+    """Generates and returns a random trackingId
+
+    :return: Random trackingId string
+    :rtype: str
+    """
+    random_int_array = [random.randrange(256) for _ in range(16)]
+    rand_byte_array = bytearray(random_int_array)
+    return str(base64.b64encode(rand_byte_array))[2:-1]
